@@ -1,118 +1,200 @@
-# Gluu PostHog Web — Quick Start (Your Project)
+Gluu PostHog Test
 
-A minimal React + Vite app wired with **PostHog** for pageviews, funnels, cohorts, and privacy‑safe session recordings. This README is tailored to your current setup (`Gluutest/posthog-web`, branch `test/posthog`).
+A tiny full-stack playground for the Gluu Admin Dashboard analytics layer.
+Frontend is React + TypeScript (Vite); backend is a simple Node server to fake auth, uploads, and payments.
+We use PostHog for funnels, events, session replay, and embedded insights.
 
----
+Features
 
-## Overview
-- **Purpose:** Add PostHog analytics to Gluu and verify events during development.
-- **Key files:**
-  - `src/lib/posthog.ts` — SDK init + helpers (`initPostHog`, `identifyUser`, `capture`, `resetAnalytics`, timers).
-  - `src/main.tsx` — calls `initPostHog()` and tracks SPA `$pageview` on route changes.
-- **Events used (starter taxonomy):**
-  - `sign_up_submitted`, `onboarding_completed`, `file_uploaded { source }`
-  - `login`, `logout`
-  - `payment_attempted`, `payment_succeeded`, `payment_failed`
-  - `quota_near_limit`
-  - `stayed_2m_after_login`, `stayed_3m`
+Email/password login (mock) with PostHog identify
 
----
+Upload quota (Free vs Premium) + “near limit” and “reached” events
 
-## Prerequisites
-- Node.js 18+ and npm
-- Git
-- A PostHog project (Cloud or self‑hosted)
+Simulated Stripe outcomes (success / fail)
 
----
+Session replay gated to start after login
 
-## Getting Started
+Optional embedded PostHog funnel in the dashboard
 
-> If this app lives inside a parent repo (e.g., `Gluutest`), run commands from the **`posthog-web/`** folder.
+TS-safe components: Login, Dashboard, ProtectedRoute, UploadWidget
 
-```bash
-# 1) Install deps
-npm install
+Tech
 
-# 2) Environment variables
-cp .env.example .env
-# Edit .env with your values:
-# VITE_PUBLIC_POSTHOG_KEY=phc_xxxxxxxxxxxxxxxxxxxxxxxx
-# VITE_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+Frontend: Vite, React 18, TypeScript, React Router
 
-# 3) Run the dev server
-npm run dev
-# App: http://localhost:5173
-```
+Analytics: posthog-js (US or EU host)
 
-**Windows one‑liner (PowerShell):**
-```powershell
-npm i; if (!(Test-Path .env) -and (Test-Path .env.example)) { Copy-Item .env.example .env }; npm run dev
-```
+Styling: Tailwind classes (utility CSS)
 
----
+Backend: Minimal Node/Express (mock API)
 
-## Environment Variables (`.env`)
+Repo layout
+.
+├── backend/
+│   ├── server.js                 # mock API: /login, /logout, /upload, /upgrade, /payments...
+│   └── package.json
+├── frontend/
+│   ├── index.html                # entry points to /src/main.tsx
+│   ├── src/
+│   │   ├── main.tsx              # boot + Router + ErrorBoundary
+│   │   ├── App.tsx
+│   │   ├── api.ts                # tiny fetch wrapper
+│   │   ├── posthog.ts            # PostHog init + helpers (replay gated)
+│   │   ├── pages/
+│   │   │   ├── Login.tsx
+│   │   │   └── Dashboard.tsx
+│   │   ├── components/
+│   │   │   ├── ProtectedRoute.tsx
+│   │   │   ├── UploadWidget.tsx
+│   │   │   └── PaymentHistory.tsx
+│   │   ├── styles.css
+│   │   └── vite-env.d.ts
+│   └── tsconfig.json
+└── README.md
 
-```ini
-VITE_PUBLIC_POSTHOG_KEY=phc_xxxxxxxxxxxxxxxxxxxxxxxx
-VITE_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-```
+Prereqs
 
-- `VITE_PUBLIC_POSTHOG_KEY`: your **Project API key** from PostHog.
-- `VITE_PUBLIC_POSTHOG_HOST`: keep default for PostHog Cloud or set to your self‑hosted URL.
+Node 18+
 
-> Never commit real keys. Keep `.env` out of git and provide a `.env.example` instead.
+A PostHog project (US or EU)
 
----
+Quick start
+1) Backend (mock API)
+cd backend
+npm i
+npm run start   # starts http://localhost:3001
 
-## Available Scripts
-```bash
-npm run dev       # start Vite dev server on :5173
-npm run build     # production build to dist/
-npm run preview   # serve built app locally
-```
+2) Frontend
+cd ../frontend
+npm i
+cp .env.example .env    # create your env file (see below)
+npm run dev             # starts http://localhost:5173
 
----
 
-## Analytics Usage (where to call these)
+Open http://localhost:5173
 
-- **After login**  
-  `identifyUser(user.id, { email, name, plan, role }); capture('login', { method }); startStayTimers(true)`
+Environment variables (frontend)
 
-- **On logout**  
-  `capture('logout'); resetAnalytics()`
+Create frontend/.env:
 
-- **Registration / Onboarding / Upload**  
-  `capture('sign_up_submitted'); capture('onboarding_completed'); capture('file_uploaded', { source: 'register' | 'profile', file_type, size_kb })`
+# Your PostHog Project API key (starts with PHC_)
+VITE_POSTHOG_KEY=PHC_xxx
 
-- **Quota checks**  
-  `maybeCaptureQuotaNearLimit(used, limit)`
+# Choose ONE host (match your project region)
+# US:
+VITE_POSTHOG_HOST=https://us.posthog.com
+# EU:
+# VITE_POSTHOG_HOST=https://eu.posthog.com
 
-- **Privacy**  
-  Add `data-ph-mask="true"` to sensitive inputs; recordings are already set to `maskAllInputs: true`.
+# Optional: URL to an embedded funnel (PostHog → Save → Share → Embed)
+# Example (do not include quotes or key attr):
+# VITE_PH_ONBOARDING_FUNNEL_URL=https://us.posthog.com/embedded/<id>
 
----
 
-## Git & Branch
-You’re on `test/posthog` and tracking `origin/test/posthog`. Push with:
-```bash
-git add -A
-git commit -m "docs: add project quick start + PostHog usage"
-git push -u origin test/posthog
-```
+Important: Never commit real keys. .env is git-ignored.
 
-If you later want a standalone repo for just this app, you can split the folder:
-```bash
-# from repo root (one level above posthog-web)
-git subtree split --prefix=posthog-web -b posthog-web-standalone
-# create empty GitHub repo then push:
-git push https://github.com/<you>/posthog-web.git posthog-web-standalone:main
-```
+PostHog behavior in this app
 
----
+posthog.init runs once in src/posthog.ts
 
-## Troubleshooting
-- **No events** → confirm `VITE_PUBLIC_POSTHOG_KEY`, check Network tab for `/e/` requests, disable ad‑blockers.
-- **Duplicate pageviews** → ensure `$pageview` isn’t fired in multiple places.
-- **Wrong user after logout** → ensure `posthog.reset()` runs on logout.
-- **Ports busy** → `npx kill-port 5173` or run `npm run dev -- --port 3000`.
+We immediately call stopSessionRecording() so replay does not start for anonymous users
+
+On login success:
+
+posthog.identify(user.email)
+
+setPersonProperties({ plan, quota_pct, has_uploaded_image… })
+
+startSessionRecording() (begin replay)
+
+capture('login_success')
+
+On logout:
+
+stopSessionRecording()
+
+reset() (clears distinct_id and props)
+
+You can switch to full opt-in tracking by calling posthog.opt_out_capturing() after init and posthog.opt_in_capturing() on login.
+
+Event taxonomy (used in the demo)
+Event	When	Important properties
+login_success	login OK	—
+login_failed	login error	reason
+logout	user clicks logout	—
+upload_attempt	click upload	—
+upload_success	upload OK	uploads, quota, quotaPct
+upload_failed	upload error	reason
+quota_near_limit	80–99% usage	uploads, quota, quotaPct
+quota_reached	>=100% usage	uploads, quota, quotaPct
+payment_succeeded	simulated success	provider, amount
+payment_failed	simulated fail	provider, amount
+plan_upgraded	plan → premium	quota
+plan_downgraded	plan → free	quota
+usage_reset	reset button	plan
+retention_over_2min	timer fires	—
+
+Person properties we set: email, plan, registered, has_uploaded_image, quota_pct.
+
+Embedded funnel (optional)
+
+In PostHog: build a funnel (e.g., login_success → upload_success)
+
+Click Save → Share → Embed → copy the embed URL only
+
+Put it into .env as VITE_PH_ONBOARDING_FUNNEL_URL
+
+The Dashboard will render it inside an iframe card
+
+Mock data (optional CSV import)
+
+If you want instant charts, import a small CSV of 20 demo events:
+
+File: posthog_mock_events_20.csv (you can generate or use the one in the repo if present)
+
+PostHog → Data management → Sources → CSV import
+
+Map: event, distinct_id, timestamp, properties (JSON), uuid
+
+Then build a funnel and trends in minutes.
+
+Scripts
+
+Backend
+
+npm run start    # node server.js on :3001
+
+
+Frontend
+
+npm run dev      # Vite dev on :5173
+npm run build    # production build
+npm run preview  # preview prod build on :4173
+
+Common issues
+
+Vite still looks for /src/main.jsx
+Update frontend/index.html to <script type="module" src="/src/main.tsx"></script> and restart dev server.
+
+TS complains about PostHog methods
+Types don’t (yet) include startSessionRecording/stopSessionRecording/setPersonProperties.
+We use (posthog as any).startSessionRecording?.() etc. Intentionally.
+
+No events arriving
+Check the right host (US vs EU), the Project API key, and that your ad-blocker isn’t blocking PostHog.
+
+Contributing
+
+Branch: git checkout -b feature/xyz
+
+Commit: git commit -m "feat: ..."
+
+Push: git push -u origin feature/xyz
+
+PR to main
+
+License
+
+MIT (for the test project). Replace if your org requires something else.
+
+If you want this README prefilled with your exact embed URL and a larger mock CSV (e.g., 500 events over 30 days) I can generate both for you to commit.
