@@ -1,4 +1,4 @@
-# Gluu PostHog Web — Quick Start (Your Project)
+# Gluu PostHog Web — Quick Start 
 
 A minimal React + Vite app wired with **PostHog** for pageviews, funnels, cohorts, and privacy‑safe session recordings. This README is tailored to your current setup (`Gluutest/posthog-web`, branch `test/posthog`).
 
