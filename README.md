@@ -1,4 +1,4 @@
-# Gluu PostHog Web — Quick Start 
+# Gluu PostHog Web — Quick Start (Your Project)
 
 A minimal React + Vite app wired with **PostHog** for pageviews, funnels, cohorts, and privacy‑safe session recordings. This README is tailored to your current setup (`Gluutest/posthog-web`, branch `test/posthog`).
 
@@ -47,6 +47,48 @@ npm run dev
 **Windows one‑liner (PowerShell):**
 ```powershell
 npm i; if (!(Test-Path .env) -and (Test-Path .env.example)) { Copy-Item .env.example .env }; npm run dev
+```
+
+---
+
+
+---
+
+## Run Frontend & Backend (two terminals)
+
+> If your repo layout is `gluu/` with a `server/` backend and a `posthog-web/` frontend subfolder, run each service separately.
+
+### Terminal A — Backend (Express)
+```bash
+cd server
+npm install
+# choose one of the following depending on your package.json:
+npm run dev        # if a dev script exists
+# or
+node index.js      # default entry
+# Backend runs at http://localhost:4242
+```
+
+### Terminal B — Frontend (Vite)
+```bash
+cd posthog-web           # or the frontend folder that has package.json
+npm install
+npm run dev              # Frontend runs at http://localhost:5173
+```
+
+**Tip (Windows PowerShell quick start):**
+```powershell
+# Backend
+cd server; npm i; npm run dev
+# New tab for frontend
+cd ..\posthog-web; npm i; npm run dev
+```
+
+**Ports busy?**
+```bash
+npx kill-port 4242 5173
+# or change port for Vite:
+npm run dev -- --port 3000
 ```
 
 ---
@@ -116,3 +158,8 @@ git push https://github.com/<you>/posthog-web.git posthog-web-standalone:main
 - **Duplicate pageviews** → ensure `$pageview` isn’t fired in multiple places.
 - **Wrong user after logout** → ensure `posthog.reset()` runs on logout.
 - **Ports busy** → `npx kill-port 5173` or run `npm run dev -- --port 3000`.
+
+---
+
+## Related Docs
+- Proposal PDF: sandbox:/mnt/data/CSIS4495 - Proposal - Fall 2025.pdf
