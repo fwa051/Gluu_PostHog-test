@@ -1,11 +1,14 @@
+// src/pages/Login.tsx
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api'          // no .js
-import posthog from '../posthog'      // no .js
+import { api } from '../api'
+import posthog, { onLoginStartTracking } from '../posthog'
+
+type Plan = 'free' | 'plus' | 'premium'
 
 type User = {
   email: string
-  plan?: string
+  plan?: Plan
   uploads?: number
   quota?: number
   [k: string]: unknown
@@ -30,36 +33,49 @@ export default function Login({ onAuth }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string>('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
+    setLoading(true)
 
     try {
       const res = await api.post<LoginResp>('/login', { email, password })
       const user = res.data
       onAuth(user)
 
-      // Identify + person properties
-      posthog.identify(user.email ?? email)
-      ;(posthog as any).setPersonProperties?.({
+      // Compute quota %
+      const uploads = user.uploads ?? 0
+      const quota = Math.max(1, user.quota ?? 1)
+      const quota_pct = uploads / quota
+
+      // Identify + start session recording + SPA pageview
+      onLoginStartTracking({
+        id: user.email ?? email,
         email: user.email ?? email,
-        registered: true,
-        has_uploaded_image: (user.uploads ?? 0) > 0,
-        plan: user.plan ?? 'free',
-        quota_pct: (user.uploads ?? 0) / Math.max(1, user.quota ?? 1),
+        plan: (user.plan as Plan) ?? 'free',
       })
 
-      // Start replay after successful login (we already stop/reset on logout)
-      ;(posthog as any).startSessionRecording?.()
-      posthog.capture('login_success')
+      // Persist person properties for analysis
+      ;(posthog as unknown as { setPersonProperties?: (p: Record<string, unknown>) => void })
+        .setPersonProperties?.({
+          email: user.email ?? email,
+          registered: true,
+          has_uploaded_image: uploads > 0,
+          plan: (user.plan as Plan) ?? 'free',
+          quota_pct,
+        })
 
+      posthog.capture('login_success', { plan: user.plan ?? 'free' })
       navigate('/', { replace: true })
     } catch (err: unknown) {
       const msg = extractErrorMessage(err)
       setError(msg)
       posthog.capture('login_failed', { reason: msg })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -94,7 +110,9 @@ export default function Login({ onAuth }: Props) {
           </div>
         )}
 
-        <button type="submit" className="btn-primary w-full">Sign in</button>
+        <button type="submit" className="btn-primary w-full" disabled={loading}>
+          {loading ? 'Signing in…' : 'Sign in'}
+        </button>
       </form>
     </div>
   )

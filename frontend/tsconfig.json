@@ -6,15 +6,17 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "strict": true,
-    "noImplicitAny": false,
     "skipLibCheck": true,
-    "allowJs": true,
+    "allowJs": true,         // OK during migration
     "checkJs": false,
     "isolatedModules": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "noEmit": true,          // <-- prevents “would overwrite input file”
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": { "@/*": ["src/*"] },
+    "types": ["vite/client"]
   },
-  "include": ["src", "vite-env.d.ts"]
+  "include": ["src", "vite-env.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

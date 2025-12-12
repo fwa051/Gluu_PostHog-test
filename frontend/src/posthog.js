@@ -1,37 +1,61 @@
+// src/posthog.js
+// @ts-check
 import posthog from 'posthog-js'
 
-const key  = import.meta.env.VITE_POSTHOG_KEY
-const host = import.meta.env.VITE_POSTHOG_HOST || 'https://us.posthog.com'
+/**
+ * @typedef {'free'|'plus'|'premium'} Plan
+ * @typedef {{ id?: string, email?: string, plan?: Plan }} PHUser
+ */
 
-if (!key) {
-  console.warn('No VITE_POSTHOG_KEY; PostHog disabled')
-} else {
-  posthog.init(key, {
-    api_host: host,
-    autocapture: true,
-    capture_pageview: true,
+const PH_KEY  = import.meta.env.VITE_POSTHOG_KEY
+const PH_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.posthog.com'
 
-    // record sessions (both anonymous and identified)
-    // exact option names vary by SDK version, so we also start it explicitly below
-    session_recording: {
-      // keep PII safe:
-      maskAllInputs: true,      // masks <input>, <textarea>, contentEditable
-      // If your SDK supports these, you can enable them too:
-      // recordCanvas: true,     // record <canvas> (charts, etc.)
-      // captureNetwork: true,   // log XHR/fetch metadata in replay
-      // recordConsole: true,    // show console logs in replay
-    },
+posthog.init(PH_KEY, {
+  api_host: PH_HOST,
+  autocapture: true,
+  capture_pageview: false,
+  session_recording: { maskAllInputs: true, maskInputOptions: { password: true } },
+})
 
-    person_profiles: 'identified_only',
-    debug: true, // see init + capture logs in DevTools console
-  })
+posthog.opt_out_capturing?.()
 
-  // Force-on recording for all sessions (covers older/newer SDK differences)
-  try { posthog.startSessionRecording?.() } catch(_) {}
+if (!posthog.setPersonProperties) {
+  posthog.setPersonProperties = (props = {}) => { try { posthog.capture('$set', props) } catch {} }
 }
 
-export function startRetentionTimer() {
-  const t = setTimeout(() => posthog.capture('retention_over_2min', { page: 'Dashboard' }), 120000)
+/** @param {string} [pathname] */
+export function trackSPAView(pathname = window.location.pathname) {
+  try { posthog.capture('$pageview', { $current_url: window.location.origin + pathname }) } catch {}
+}
+
+/** @param {PHUser} [user] */
+export function onLoginStartTracking(user = {}) {
+  try {
+    posthog.opt_in_capturing?.()
+    if (user.id) {
+      posthog.identify(user.id, {
+        email: user.email,
+        plan: user.plan || 'free',
+      })
+    }
+    posthog.startSessionRecording?.()
+    trackSPAView()
+  } catch {}
+}
+
+export function onLogoutStopTracking() {
+  try { posthog.stopSessionRecording?.() } catch {}
+  posthog.reset()
+  posthog.opt_out_capturing?.()
+}
+
+/**
+ * @param {number} [thresholdMs]
+ * @param {string} [eventName]
+ * @returns {() => void}
+ */
+export function startRetentionTimer(thresholdMs = 120_000, eventName = 'retention_over_2min') {
+  const t = setTimeout(() => { try { posthog.capture(eventName) } catch {} }, thresholdMs)
   return () => clearTimeout(t)
 }
 

@@ -1,37 +1,39 @@
-import { useEffect, useState } from 'react'
+// src/App.tsx
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import { api } from './api'            // assumes api.get<T>(path)
+import { api } from './api'
 import posthog from './posthog'
 import './styles.css'
-
-type User = {
-  email: string
-  plan?: 'free' | 'premium' | string
-  [key: string]: unknown
-}
+import type { User } from './types'   // <-- use shared types; no local re-declarations
 
 export default function App() {
   // undefined = loading, null = signed out, object = signed in
   const [user, setUser] = useState<User | null | undefined>(undefined)
   const navigate = useNavigate()
 
-  // Check session on first load
+  // after login/register
+  const handleAuth = (u: User) => {
+    setUser(u)
+    navigate('/', { replace: true })
+  }
+
+  // check session on first load
   useEffect(() => {
     let mounted = true
     api.get<User | null>('/me')
-      .then((r) => { if (mounted) setUser(r.data ?? null) })
+      .then(r => { if (mounted) setUser(r.data ?? null) })
       .catch(() => { if (mounted) setUser(null) })
     return () => { mounted = false }
   }, [])
 
   const logout = async () => {
-    try { await api.get('/logout') } catch { /* ignore */ }
+    try { await api.get('/logout') } catch {}
     posthog.capture('logout')
     ;(posthog as any).stopSessionRecording?.()
-    posthog.reset() // clears distinct_id + props
+    posthog.reset()
     setUser(null)
     navigate('/login', { replace: true })
   }
@@ -51,6 +53,7 @@ export default function App() {
               <>
                 <span className="hidden text-sm text-gray-600 md:inline">{user.email}</span>
                 {user.plan === 'premium' && <span className="badge">Premium</span>}
+                {user.plan === 'plus' && <span className="badge">Plus</span>}
                 <Link to="/" className="btn-ghost text-sm">Dashboard</Link>
                 <button onClick={logout} className="btn-primary text-sm">Logout</button>
               </>
@@ -70,12 +73,9 @@ export default function App() {
           <div className="card p-6">Loading…</div>
         ) : (
           <Routes>
-            <Route
-              path="/"
-              element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />}
-            />
-            <Route path="/login" element={<Login onAuth={setUser} />} />
-            <Route path="/register" element={<Register onAuth={setUser} />} />
+            <Route path="/" element={user ? <Dashboard user={user} /> : <Navigate to="/login" replace />} />
+            <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login onAuth={handleAuth} />} />
+            <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register onAuth={handleAuth} />} />
           </Routes>
         )}
       </main>

@@ -1,6 +1,8 @@
-import axios from 'axios';
+// src/api.ts
+import axios from 'axios'
 
+// Use a relative base and let Vite proxy to the backend in dev.
 export const api = axios.create({
-baseURL: 'http://localhost:3001/api',
-withCredentials: true,
-});
+  baseURL: '/api',
+  withCredentials: true,
+})
